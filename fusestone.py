@@ -93,9 +93,9 @@ class Fusestone(Fuse):
         yield fuse.Direntry('.')
         yield fuse.Direntry('..')
         if path == '/':
-            self.projects = self.ks.get_projects()['data']
-            for project in self.projects:
-                d = str(project['short_name'])
+            for project in self.ks.get_projects():
+                log(project)
+                d = str(project.short_name)
                 self.dirs['/' + d] = project
                 yield fuse.Direntry(d)
 
