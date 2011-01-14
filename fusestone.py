@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 
-#    Copyright (C) 2006  Andrew Straw  <strawman@astraw.com>
-#
-#    This program can be distributed under the terms of the GNU LGPL.
-#    See the file COPYING.
-#
+import json
+import sys
+import os
+import stat
+import errno
 
-import os, stat, errno
-# pull in some spaghetti to make this stuff work without fuse-py being installed
 try:
     import _find_fuse_parts
 except ImportError:
@@ -15,6 +13,10 @@ except ImportError:
 import fuse
 from fuse import Fuse
 
+import keystone
+
+
+ROOT = os.path.abspath(os.path.dirname(__file__))
 
 if not hasattr(fuse, '__version__'):
     raise RuntimeError, \
@@ -38,26 +40,70 @@ class MyStat(fuse.Stat):
         self.st_mtime = 0
         self.st_ctime = 0
 
-class HelloFS(Fuse):
+def log(msg):
+    open(os.path.join(ROOT, 'fusestone.log'), 'a+').write(str(msg) + '\n')
 
+def wrap(func):
+    def catch(*args, **kw):
+        try:
+            log('calling ' + str(func))
+            return func(*args, **kw)
+        except Exception, e:
+            log('exception!')
+            log(e)
+    return catch
+
+
+class Fusestone(Fuse):
+
+    def __init__(self, *args, **kw):
+        self.dirs = {}
+        self.files = {}
+        log('Fusestone Starting...')
+        self.config = kw['config']
+        self.ks = keystone.API(self.config['host'])
+        print self.ks.login(self.config['user'], self.config['pass'])
+        del kw['config']
+        Fuse.__init__(self, *args, **kw)
+
+    @wrap
     def getattr(self, path):
+        log('getattr ' + path)
         st = MyStat()
         if path == '/':
             st.st_mode = stat.S_IFDIR | 0755
             st.st_nlink = 2
+            return st
+        
+        return -errno.ENOENT
+        
+        if path in self.dirs:
+            st.st_mode = stat.S_IFDIR | 0755
+            st.st_nlink = 2
+            return st
+
         elif path == hello_path:
             st.st_mode = stat.S_IFREG | 0444
             st.st_nlink = 1
             st.st_size = len(hello_str)
         else:
             return -errno.ENOENT
-        return st
-
+        return st   
+   
+    @wrap
     def readdir(self, path, offset):
-        for r in  '.', '..', hello_path[1:]:
-            yield fuse.Direntry(r)
+        yield fuse.Direntry('.')
+        yield fuse.Direntry('..')
+        return
+        if path == '/':
+            self.projects = self.ks.get_projects()['data']
+            for project in self.projects:
+                d = str(project['short_name'])
+                self.files[d] == project
+                yield fuse.Direntry(d)
 
     def open(self, path, flags):
+        log('open ' + path)
         if path != hello_path:
             return -errno.ENOENT
         accmode = os.O_RDONLY | os.O_WRONLY | os.O_RDWR
@@ -65,6 +111,7 @@ class HelloFS(Fuse):
             return -errno.EACCES
 
     def read(self, path, size, offset):
+        log('read ' + path)
         if path != hello_path:
             return -errno.ENOENT
         slen = len(hello_str)
@@ -77,16 +124,21 @@ class HelloFS(Fuse):
         return buf
 
 def main():
-    usage="""
-Userspace hello example
 
+    config = json.load(open('config.json'))
+    
+    usage="""
+Keystone Fuse
 """ + Fuse.fusage
-    server = HelloFS(version="%prog " + fuse.__version__,
-                     usage=usage,
-                     dash_s_do='setsingle')
+    server = Fusestone(
+        version="%prog " + fuse.__version__,
+        usage=usage,
+        dash_s_do='setsingle',
+        config=config)
 
     server.parse(errex=1)
     server.main()
 
 if __name__ == '__main__':
     main()
+
