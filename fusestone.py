@@ -46,7 +46,7 @@ def log(msg):
 def wrap(func):
     def catch(*args, **kw):
         try:
-            log('calling ' + str(func))
+            log(' -> ' + func.func_name + ' with ' + str(args[1:]) + ' ' + str(kw))
             return func(*args, **kw)
         except Exception, e:
             log('exception!')
@@ -94,12 +94,11 @@ class Fusestone(Fuse):
     def readdir(self, path, offset):
         yield fuse.Direntry('.')
         yield fuse.Direntry('..')
-        return
         if path == '/':
             self.projects = self.ks.get_projects()['data']
             for project in self.projects:
                 d = str(project['short_name'])
-                self.files[d] == project
+                self.dirs[d] = project
                 yield fuse.Direntry(d)
 
     def open(self, path, flags):
