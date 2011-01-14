@@ -68,27 +68,25 @@ class Fusestone(Fuse):
 
     @wrap
     def getattr(self, path):
-        log('getattr ' + path)
         st = MyStat()
+
         if path == '/':
             st.st_mode = stat.S_IFDIR | 0755
             st.st_nlink = 2
             return st
         
-        return -errno.ENOENT
-        
         if path in self.dirs:
             st.st_mode = stat.S_IFDIR | 0755
-            st.st_nlink = 2
+            st.st_nlink = 0
             return st
 
-        elif path == hello_path:
-            st.st_mode = stat.S_IFREG | 0444
-            st.st_nlink = 1
-            st.st_size = len(hello_str)
-        else:
-            return -errno.ENOENT
-        return st   
+#        elif path == hello_path:
+#            st.st_mode = stat.S_IFREG | 0444
+#            st.st_nlink = 1
+#            st.st_size = len(hello_str)
+#        else:
+
+        return -errno.ENOENT
    
     @wrap
     def readdir(self, path, offset):
@@ -98,11 +96,10 @@ class Fusestone(Fuse):
             self.projects = self.ks.get_projects()['data']
             for project in self.projects:
                 d = str(project['short_name'])
-                self.dirs[d] = project
+                self.dirs['/' + d] = project
                 yield fuse.Direntry(d)
 
     def open(self, path, flags):
-        log('open ' + path)
         if path != hello_path:
             return -errno.ENOENT
         accmode = os.O_RDONLY | os.O_WRONLY | os.O_RDWR
@@ -110,7 +107,6 @@ class Fusestone(Fuse):
             return -errno.EACCES
 
     def read(self, path, size, offset):
-        log('read ' + path)
         if path != hello_path:
             return -errno.ENOENT
         slen = len(hello_str)
