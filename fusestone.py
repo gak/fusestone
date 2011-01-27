@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import re
 import json
 import sys
 import os
@@ -87,6 +88,20 @@ class Fusestone(Fuse):
 #        else:
 
         return -errno.ENOENT
+
+    def _readdir_ks(self, objs, name_key=None, prefix=None):
+        if not name_key:
+            name_key = 'name'
+        if not prefix:
+            prefix = '/'
+        ret = []
+        for obj in objs:
+            d = str(getattr(obj, name_key))
+            p = prefix + '/' + d
+            log(p)
+            self.dirs[p] = obj
+            ret.append(fuse.Direntry(d))
+        return ret
    
     @wrap
     def readdir(self, path, offset):
@@ -98,6 +113,19 @@ class Fusestone(Fuse):
                 d = str(project.short_name)
                 self.dirs['/' + d] = project
                 yield fuse.Direntry(d)
+            return
+
+        obj = self.dirs.get(path, None)
+        if obj:
+            if isinstance(obj, keystone.Project):
+                objs = self._readdir_ks(obj.blockheaders(), prefix=path)
+            if isinstance(obj, keystone.BlockHeader):
+                objs = self._readdir_ks(obj.formtypeheaders(), prefix=path)
+
+            if objs:
+                for o in objs:
+                    yield o
+            
 
     def open(self, path, flags):
         if path != hello_path:
