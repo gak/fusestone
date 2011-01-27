@@ -25,8 +25,6 @@ if not hasattr(fuse, '__version__'):
 
 fuse.fuse_python_api = (0, 2)
 
-hello_path = '/hello'
-hello_str = 'Hello World!\n'
 
 class MyStat(fuse.Stat):
     def __init__(self):
@@ -80,12 +78,6 @@ class Fusestone(Fuse):
             st.st_mode = stat.S_IFDIR | 0755
             st.st_nlink = 0
             return st
-
-#        elif path == hello_path:
-#            st.st_mode = stat.S_IFREG | 0444
-#            st.st_nlink = 1
-#            st.st_size = len(hello_str)
-#        else:
 
         return -errno.ENOENT
 
