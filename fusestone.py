@@ -113,6 +113,10 @@ class Fusestone(Fuse):
                 objs = self._readdir_ks(obj.blockheaders(), prefix=path)
             if isinstance(obj, keystone.BlockHeader):
                 objs = self._readdir_ks(obj.formtypeheaders(), prefix=path)
+            if isinstance(obj, keystone.FormTypeHeader):
+                objs = self._readdir_ks(obj.filters(), prefix=path)
+            if isinstance(obj, keystone.Filter):
+                objs = self._readdir_ks(obj.results(), prefix=path)
 
             if objs:
                 for o in objs:

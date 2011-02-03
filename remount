@@ -1,0 +1,3 @@
+sudo umount ../mnt
+python fusestone.py ../mnt
+
