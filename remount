@@ -1,3 +1,4 @@
+dirs -c
 pushd ~/src/fusestone
 sudo umount ~/src/mnt
 python fusestone.py ~/src/mnt

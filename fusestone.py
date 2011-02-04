@@ -80,8 +80,6 @@ class Fusestone(Fuse):
             st.st_nlink = 0
             return st
 
-        log('failing %s' % path)
-
         return -errno.ENOENT
 
     def _readdir_ks(self, objs, name_key=None, prefix=None):
@@ -116,8 +114,8 @@ class Fusestone(Fuse):
                 objs = self._readdir_ks(obj.formtypeheaders(), prefix=path)
             if isinstance(obj, keystone.FormTypeHeader):
                 objs = self._readdir_ks(obj.filters(), prefix=path)
-            #if isinstance(obj, keystone.Filter):
-            #    objs = self._readdir_ks(obj.results(), prefix=path)
+            if isinstance(obj, keystone.Filter):
+                objs = self._readdir_ks(obj.results(), prefix=path)
 
             if objs:
                 for o in objs:
