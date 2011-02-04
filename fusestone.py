@@ -44,11 +44,12 @@ def log(msg):
 
 def wrap(func):
     def catch(*args, **kw):
+        log(' -> ' + func.func_name + ' with ' + \
+            str(args[1:]) + ' ' + str(kw))
         try:
-            log(' -> ' + func.func_name + ' with ' + str(args[1:]) + ' ' + str(kw))
-            return func(*args, **kw)
+            ret = func(*args, **kw)
+            return ret
         except Exception, e:
-            log('exception!')
             log(e)
     return catch
 
@@ -79,6 +80,8 @@ class Fusestone(Fuse):
             st.st_nlink = 0
             return st
 
+        log('failing %s' % path)
+
         return -errno.ENOENT
 
     def _readdir_ks(self, objs, name_key=None, prefix=None):
@@ -90,24 +93,22 @@ class Fusestone(Fuse):
         for obj in objs:
             d = str(getattr(obj, name_key))
             p = prefix + '/' + d
-            log(p)
             self.dirs[p] = obj
             ret.append(fuse.Direntry(d))
         return ret
-   
+
     @wrap
     def readdir(self, path, offset):
         yield fuse.Direntry('.')
         yield fuse.Direntry('..')
         if path == '/':
             for project in self.ks.get_projects():
-                log(project)
                 d = str(project.short_name)
                 self.dirs['/' + d] = project
                 yield fuse.Direntry(d)
             return
-
         obj = self.dirs.get(path, None)
+        objs = None
         if obj:
             if isinstance(obj, keystone.Project):
                 objs = self._readdir_ks(obj.blockheaders(), prefix=path)
@@ -115,13 +116,12 @@ class Fusestone(Fuse):
                 objs = self._readdir_ks(obj.formtypeheaders(), prefix=path)
             if isinstance(obj, keystone.FormTypeHeader):
                 objs = self._readdir_ks(obj.filters(), prefix=path)
-            if isinstance(obj, keystone.Filter):
-                objs = self._readdir_ks(obj.results(), prefix=path)
+            #if isinstance(obj, keystone.Filter):
+            #    objs = self._readdir_ks(obj.results(), prefix=path)
 
             if objs:
                 for o in objs:
                     yield o
-            
 
     def open(self, path, flags):
         if path != hello_path:

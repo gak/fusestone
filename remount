@@ -1,3 +1,4 @@
-sudo umount ../mnt
-python fusestone.py ../mnt
-
+pushd ~/src/fusestone
+sudo umount ~/src/mnt
+python fusestone.py ~/src/mnt
+popd
