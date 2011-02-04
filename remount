@@ -1,5 +1,15 @@
-dirs -c
-pushd ~/src/fusestone
-sudo umount ~/src/mnt
-python fusestone.py ~/src/mnt
-popd
+cd ~/src/fusestone/
+sudo umount mnt
+python fusestone.py ../mnt
+
+cd mnt
+ls
+cd 00
+ls
+cd Mail\ Centre
+ls
+cd Mailbox
+ls
+cd Inbox
+ls
+

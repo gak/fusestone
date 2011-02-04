@@ -6,6 +6,7 @@ import sys
 import os
 import stat
 import errno
+import traceback
 
 try:
     import _find_fuse_parts
@@ -39,18 +40,17 @@ class MyStat(fuse.Stat):
         self.st_mtime = 0
         self.st_ctime = 0
 
+def logpointer():
+    return open(os.path.join(ROOT, 'fusestone.log'), 'a+')
+
 def log(msg):
-    open(os.path.join(ROOT, 'fusestone.log'), 'a+').write(str(msg) + '\n')
+    logpointer().write(str(msg) + '\n')
 
 def wrap(func):
     def catch(*args, **kw):
         log(' -> ' + func.func_name + ' with ' + \
             str(args[1:]) + ' ' + str(kw))
-        try:
-            ret = func(*args, **kw)
-            return ret
-        except Exception, e:
-            log(e)
+        return func(*args, **kw)
     return catch
 
 
@@ -107,19 +107,26 @@ class Fusestone(Fuse):
             return
         obj = self.dirs.get(path, None)
         objs = None
-        if obj:
-            if isinstance(obj, keystone.Project):
-                objs = self._readdir_ks(obj.blockheaders(), prefix=path)
-            if isinstance(obj, keystone.BlockHeader):
-                objs = self._readdir_ks(obj.formtypeheaders(), prefix=path)
-            if isinstance(obj, keystone.FormTypeHeader):
-                objs = self._readdir_ks(obj.filters(), prefix=path)
-            if isinstance(obj, keystone.Filter):
-                objs = self._readdir_ks(obj.results(), prefix=path)
+        try:
+            if obj:
+                if isinstance(obj, keystone.Project):
+                    objs = self._readdir_ks(obj.blockheaders(), prefix=path)
+                if isinstance(obj, keystone.BlockHeader):
+                    objs = self._readdir_ks(obj.formtypeheaders(), prefix=path)
+                if isinstance(obj, keystone.FormTypeHeader):
+                    objs = self._readdir_ks(obj.filters(), prefix=path)
+                if isinstance(obj, keystone.Filter):
+                    objs = self._readdir_ks(obj.results(), prefix=path,
+                        name_key='message_id')
 
-            if objs:
-                for o in objs:
-                    yield o
+                if objs:
+                    for o in objs:
+                        yield o
+
+        except:
+            log('-' * 80)
+            traceback.print_exc(file=logpointer())
+            log('-' * 80)
 
     def open(self, path, flags):
         if path != hello_path:
