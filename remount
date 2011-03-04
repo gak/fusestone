@@ -1,6 +1,6 @@
 cd ~/src/fusestone/
-sudo umount mnt
-python fusestone.py ../mnt
+sudo umount -f -l mnt
+python fusestone.py -f mnt
 
 cd mnt
 ls

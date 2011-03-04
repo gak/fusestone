@@ -100,33 +100,28 @@ class Fusestone(Fuse):
         yield fuse.Direntry('.')
         yield fuse.Direntry('..')
         if path == '/':
-            for project in self.ks.get_projects():
-                d = str(project.short_name)
+            for project in self.ks.get_projects()['data']:
+                log(project)
+                d = str(project['short_name'])
                 self.dirs['/' + d] = project
                 yield fuse.Direntry(d)
             return
         obj = self.dirs.get(path, None)
         objs = None
-        try:
-            if obj:
-                if isinstance(obj, keystone.Project):
-                    objs = self._readdir_ks(obj.blockheaders(), prefix=path)
-                if isinstance(obj, keystone.BlockHeader):
-                    objs = self._readdir_ks(obj.formtypeheaders(), prefix=path)
-                if isinstance(obj, keystone.FormTypeHeader):
-                    objs = self._readdir_ks(obj.filters(), prefix=path)
-                if isinstance(obj, keystone.Filter):
-                    objs = self._readdir_ks(obj.results(), prefix=path,
-                        name_key='message_id')
+        if obj:
+            if isinstance(obj, keystone.Project):
+                objs = self._readdir_ks(obj.blockheaders(), prefix=path)
+            if isinstance(obj, keystone.BlockHeader):
+                objs = self._readdir_ks(obj.formtypeheaders(), prefix=path)
+            if isinstance(obj, keystone.FormTypeHeader):
+                objs = self._readdir_ks(obj.filters(), prefix=path)
+            if isinstance(obj, keystone.Filter):
+                objs = self._readdir_ks(obj.results(), prefix=path,
+                    name_key='message_id')
 
-                if objs:
-                    for o in objs:
-                        yield o
-
-        except:
-            log('-' * 80)
-            traceback.print_exc(file=logpointer())
-            log('-' * 80)
+            if objs:
+                for o in objs:
+                    yield o
 
     def open(self, path, flags):
         if path != hello_path:
