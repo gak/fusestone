@@ -1,15 +1,3 @@
 cd ~/src/fusestone/
 sudo umount -f -l mnt
 python fusestone.py -f mnt
-
-cd mnt
-ls
-cd 00
-ls
-cd Mail\ Centre
-ls
-cd Mailbox
-ls
-cd Inbox
-ls
-

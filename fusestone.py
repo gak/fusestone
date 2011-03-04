@@ -82,7 +82,9 @@ class Fusestone(Fuse):
 
         return -errno.ENOENT
 
-    def _readdir_ks(self, objs, name_key=None, prefix=None):
+    def _readdir_ks(self, type_, objs, name_key=None, prefix=None):
+        log('objs')
+        log(objs)
         if not name_key:
             name_key = 'name'
         if not prefix:
@@ -91,7 +93,7 @@ class Fusestone(Fuse):
         for obj in objs:
             d = str(getattr(obj, name_key))
             p = prefix + '/' + d
-            self.dirs[p] = obj
+            self.dirs[p] = type_, obj
             ret.append(fuse.Direntry(d))
         return ret
 
@@ -103,20 +105,24 @@ class Fusestone(Fuse):
             for project in self.ks.get_projects()['data']:
                 log(project)
                 d = str(project['short_name'])
-                self.dirs['/' + d] = project
+                self.dirs['/' + d] = 'project', project
                 yield fuse.Direntry(d)
             return
-        obj = self.dirs.get(path, None)
+        type_, obj = self.dirs.get(path, None)
         objs = None
+        log(obj)
         if obj:
-            if isinstance(obj, keystone.Project):
-                objs = self._readdir_ks(obj.blockheaders(), prefix=path)
-            if isinstance(obj, keystone.BlockHeader):
-                objs = self._readdir_ks(obj.formtypeheaders(), prefix=path)
-            if isinstance(obj, keystone.FormTypeHeader):
-                objs = self._readdir_ks(obj.filters(), prefix=path)
-            if isinstance(obj, keystone.Filter):
-                objs = self._readdir_ks(obj.results(), prefix=path,
+            if type_ == 'project':
+                objs = self._readdir_ks('blockheader',
+                    self.ks.get_blockheaders(obj['id']), name_key='short_name',
+                    prefix=path)
+            if type_ == 'blockheader':
+                objs = self._readdir_ks('formtypeheader', obj.formtypeheaders(), 
+                    prefix=path)
+            if type_ == 'formtypeheader':
+                objs = self._readdir_ks('filter', obj.filters(), prefix=path)
+            if type_ == 'result':
+                objs = self._readdir_ks('result', obj.results(), prefix=path,
                     name_key='message_id')
 
             if objs:
