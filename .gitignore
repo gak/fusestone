@@ -1,0 +1,6 @@
+config.json
+*.pyc
+*.pyo
+keystone-python
+fusestone.log
+
