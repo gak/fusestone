@@ -77,7 +77,7 @@ class Fusestone(Fuse):
         
         if path in self.dirs:
             st.st_mode = stat.S_IFDIR | 0755
-            st.st_nlink = 0
+            st.st_nlink = 2
             return st
 
         return -errno.ENOENT
@@ -90,12 +90,16 @@ class Fusestone(Fuse):
         if not prefix:
             prefix = '/'
         ret = []
-        for obj in objs:
-            d = str(getattr(obj, name_key))
+        for obj in objs['data']:
+            d = obj[name_key]
             p = prefix + '/' + d
             self.dirs[p] = type_, obj
-            ret.append(fuse.Direntry(d))
+            log(d)
+            ret.append(fuse.Direntry(str(d)))
         return ret
+
+    def get_parent(self, f):
+        return os.path.dirname(f)
 
     @wrap
     def readdir(self, path, offset):
@@ -103,7 +107,6 @@ class Fusestone(Fuse):
         yield fuse.Direntry('..')
         if path == '/':
             for project in self.ks.get_projects()['data']:
-                log(project)
                 d = str(project['short_name'])
                 self.dirs['/' + d] = 'project', project
                 yield fuse.Direntry(d)
@@ -114,18 +117,25 @@ class Fusestone(Fuse):
         if obj:
             if type_ == 'project':
                 objs = self._readdir_ks('blockheader',
-                    self.ks.get_blockheaders(obj['id']), name_key='short_name',
-                    prefix=path)
+                    self.ks.get_blockheaders(obj['id']), prefix=path)
             if type_ == 'blockheader':
-                objs = self._readdir_ks('formtypeheader', obj.formtypeheaders(), 
-                    prefix=path)
+                p = self.get_parent(path)
+                _, p = self.dirs[p]
+                objs = self._readdir_ks('formtypeheader', self.ks.get_formtypeheaders(
+                    p['id'], obj['id']), prefix=path)
             if type_ == 'formtypeheader':
-                objs = self._readdir_ks('filter', obj.filters(), prefix=path)
+                bh = self.get_parent(path)
+                p = self.get_parent(bh)
+                _, bh = self.dirs[bh]
+                _, p = self.dirs[p]
+                objs = self._readdir_ks('filter', self.ks.get_filters(
+                    p['id'], bh['id'], obj['id']), prefix=path)
             if type_ == 'result':
                 objs = self._readdir_ks('result', obj.results(), prefix=path,
                     name_key='message_id')
 
             if objs:
+                log(len(objs))
                 for o in objs:
                     yield o
 
