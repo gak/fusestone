@@ -90,7 +90,14 @@ class Fusestone(Fuse):
         if not prefix:
             prefix = '/'
         ret = []
-        for obj in objs['data']:
+
+        if type_ == 'result':
+            objs = objs['data']['results']
+        else:
+            objs = objs['data']
+
+        for obj in objs:
+            log(obj)
             d = obj[name_key]
             p = prefix + '/' + d
             self.dirs[p] = type_, obj
@@ -130,8 +137,14 @@ class Fusestone(Fuse):
                 _, p = self.dirs[p]
                 objs = self._readdir_ks('filter', self.ks.get_filters(
                     p['id'], bh['id'], obj['id']), prefix=path)
-            if type_ == 'result':
-                objs = self._readdir_ks('result', obj.results(), prefix=path,
+            if type_ == 'filter':
+                f = self.get_parent(path)
+                _ = self.get_parent(f)
+                p = self.get_parent(_)
+                log(p)
+                _, f = self.dirs[f]
+                _, p = self.dirs[p]
+                objs = self._readdir_ks('result', self.ks.get_results(p['id'], obj['id']), prefix=path,
                     name_key='message_id')
 
             if objs:
