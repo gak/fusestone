@@ -59,6 +59,7 @@ class Fusestone(Fuse):
     def __init__(self, *args, **kw):
         self.dirs = {}
         self.files = {}
+        self.msg = {}
         log('Fusestone Starting...')
         self.config = kw['config']
         self.ks = keystone.API(self.config['host'])
@@ -80,11 +81,14 @@ class Fusestone(Fuse):
             st.st_nlink = 2
             return st
 
+        if path in self.files:
+            st.st_mode = stat.S_IFREG | 0644
+            st.st_size = 1024*1024
+            return st
+
         return -errno.ENOENT
 
     def _readdir_ks(self, type_, objs, name_key=None, prefix=None):
-        log('objs')
-        log(objs)
         if not name_key:
             name_key = 'name'
         if not prefix:
@@ -99,9 +103,12 @@ class Fusestone(Fuse):
         for obj in objs:
             log(obj)
             d = obj[name_key]
+            collection = self.dirs
+            if type_ == 'result':
+                d = obj['values'][3] + ' ' + d
+                collection = self.files
             p = prefix + '/' + d
-            self.dirs[p] = type_, obj
-            log(d)
+            collection[p] = type_, obj
             ret.append(fuse.Direntry(str(d)))
         return ret
 
@@ -153,20 +160,39 @@ class Fusestone(Fuse):
                     yield o
 
     def open(self, path, flags):
-        if path != hello_path:
+        if path not in self.files:
             return -errno.ENOENT
-        accmode = os.O_RDONLY | os.O_WRONLY | os.O_RDWR
-        if (flags & accmode) != os.O_RDONLY:
-            return -errno.EACCES
+        type_, obj = self.files.get(path, None)
+        log(obj)
+        log(type_)
+        log(path)
+        p = self.get_parent(path)
+        _ = self.get_parent(p)
+        _ = self.get_parent(_)
+        _ = self.get_parent(_)
+        log('projectpath')
+        log(_)
+        _, p = self.dirs[_]
+        self.msg[path] = str(self.ks.get_message(p['id'], obj['message_id']))
+        log(self.msg)
 
     def read(self, path, size, offset):
-        if path != hello_path:
+        if path not in self.files:
             return -errno.ENOENT
-        slen = len(hello_str)
+        msg = str(self.msg[path])
+        log(msg)
+        log(len(msg))
+        log(size)
+        log(offset)
+        return msg[offset:offset + size]
+        
+
+
+        slen = len(msg)
         if offset < slen:
             if offset + size > slen:
                 size = slen - offset
-            buf = hello_str[offset:offset+size]
+            buf = msg[offset:offset + size]
         else:
             buf = ''
         return buf
