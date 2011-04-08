@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from StringIO import StringIO
+from pprint import pprint
 import re
 import json
 import sys
@@ -163,39 +165,22 @@ class Fusestone(Fuse):
         if path not in self.files:
             return -errno.ENOENT
         type_, obj = self.files.get(path, None)
-        log(obj)
-        log(type_)
-        log(path)
         p = self.get_parent(path)
         _ = self.get_parent(p)
         _ = self.get_parent(_)
         _ = self.get_parent(_)
-        log('projectpath')
-        log(_)
         _, p = self.dirs[_]
-        self.msg[path] = str(self.ks.get_message(p['id'], obj['message_id']))
+        self.msg[path] = self.ks.get_message(p['id'], obj['message_id'])
         log(self.msg)
 
     def read(self, path, size, offset):
         if path not in self.files:
             return -errno.ENOENT
-        msg = str(self.msg[path])
-        log(msg)
-        log(len(msg))
-        log(size)
-        log(offset)
+        f = StringIO()
+        pprint(self.msg[path], f)
+        msg = f.getvalue()
         return msg[offset:offset + size]
-        
 
-
-        slen = len(msg)
-        if offset < slen:
-            if offset + size > slen:
-                size = slen - offset
-            buf = msg[offset:offset + size]
-        else:
-            buf = ''
-        return buf
 
 def main():
 
